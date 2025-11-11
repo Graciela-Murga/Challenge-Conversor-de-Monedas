@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>Conversor de Monedas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #f9fafb;
+            --text-color: #111827;
+            --panel-bg: #ffffff;
+            --input-bg: #f3f4f6;
+            --border-color: #e5e7eb;
+            --accent: #3b82f6;
+        }
+        [data-theme="dark"] {
+            --bg-color: #0f172a;
+            --text-color: #f9fafb;
+            --panel-bg: #1e293b;
+            --input-bg: #334155;
+            --border-color: #475569;
+            --accent: #60a5fa;
+        }
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; transition: 0.3s ease; }
+        body {
+            margin: 0;
+            background: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+        }
+        header {
+            position: fixed;
+            top: 0; left: 0; width: 100%;
+            padding: 1rem 2rem;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 10;
+        }
+        .theme-toggle {
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            padding: 6rem 2rem 2rem;
+            width: 100%;
+        }
+        .converter, .chart-panel {
+            background: var(--panel-bg);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+        }
+        h1 { margin-bottom: 0.5rem; font-size: 1.8rem; }
+        .subtitle { color: var(--border-color); margin-bottom: 1.5rem; }
+        label { display: block; margin-bottom: 0.25rem; font-weight: 500; }
+        input, select {
+            width: 100%; padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            background: var(--input-bg);
+            color: var(--text-color);
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        button#convert-btn {
+            width: 100%; padding: 0.9rem;
+            border-radius: 0.5rem;
+            border: none;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        button#convert-btn:hover { background: #2563eb; }
+        .result {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            text-align: center;
+            font-size: 1.1rem;
+        }
+        canvas { width: 100%; height: auto; }
+    </style>
+</head>
+<body data-theme="light">
+<header>
+    <h2>Conversor de Monedas</h2>
+    <button class="theme-toggle" id="theme-btn">Modo oscuro</button>
+</header>
+<main>
+    <section class="converter">
+        <h1>Conversión</h1>
+        <p class="subtitle">Java Challenge · Exchange Rate API</p>
+        <form id="converter-form">
+            <label for="amount">Monto</label>
+            <input type="number" id="amount" step="0.01" min="0" placeholder="Ej: 25.00" required />
+            <div class="row">
+                <div>
+                    <label for="from">De</label>
+                    <select id="from">
+                        <option value="USD">Dólar (USD)</option>
+                        <option value="ARS">Peso Argentino (ARS)</option>
+                        <option value="BRL">Real Brasileño (BRL)</option>
+                        <option value="COP">Peso Colombiano (COP)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="to">A</label>
+                    <select id="to">
+                        <option value="ARS">Peso Argentino (ARS)</option>
+                        <option value="USD">Dólar (USD)</option>
+                        <option value="BRL">Real Brasileño (BRL)</option>
+                        <option value="COP">Peso Colombiano (COP)</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" id="convert-btn">Convertir</button>
+        </form>
+        <div id="result" class="result">Ingresa un monto y selecciona las monedas para ver el resultado.</div>
+    </section>
+    <section class="chart-panel">
+        <h2>Tendencia</h2>
+        <canvas id="chart"></canvas>
+        <p class="note">Datos simulados · Exchange Rate API</p>
+    </section>
+</main>
+<script>
+
+    const API_KEY = "fa9cbb7f08cc580ae6a911f3";
+    const BASE_URL = "https://v6.exchangerate-api.com/v6";
+
+    const form = document.getElementById("converter-form");
+    const amountInput = document.getElementById("amount");
+    const fromSelect = document.getElementById("from");
+    const toSelect = document.getElementById("to");
+    const resultDiv = document.getElementById("result");
+    const convertBtn = document.getElementById("convert-btn");
+    const themeBtn = document.getElementById("theme-btn");
+    const body = document.body;
+    const ctx = document.getElementById("chart").getContext("2d");
+    let chart;
+
+    themeBtn.addEventListener("click", () => {
+        const currentTheme = body.getAttribute("data-theme");
+        const newTheme = currentTheme === "light" ? "dark" : "light";
+        body.setAttribute("data-theme", newTheme);
+        themeBtn.textContent = newTheme === "light" ? "Modo oscuro" : "Modo claro";
+    });
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const amount = parseFloat(amountInput.value);
+        const from = fromSelect.value;
+        const to = toSelect.value;
+
+        if (isNaN(amount) || amount <= 0) {
+            resultDiv.innerHTML = '<span class="error">Ingresa un monto válido mayor que cero.</span>';
+            return;
+        }
+        if (from === to) {
+            resultDiv.innerHTML = '<span class="error">Selecciona monedas diferentes para convertir.</span>';
+            return;
+        }
+
+        convertBtn.disabled = true;
+        convertBtn.textContent = "Convirtiendo...";
+        resultDiv.textContent = "Consultando tasas de cambio...";
+
+        try {
+            const url = `${BASE_URL}/${API_KEY}/latest/${from}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            const rate = data.conversion_rates[to];
+            const converted = amount * rate;
+
+            resultDiv.innerHTML = `<strong>${amount.toFixed(2)} ${from}</strong> equivale a<br /><strong>${converted.toFixed(2)} ${to}</strong>`;
+
+            const labels = ["Hace 6 días", "Hace 5 días", "Hace 4 días", "Hace 3 días", "Hace 2 días", "Ayer", "Hoy"];
+            const rates = Array.from({ length: 7 }, () => (rate * (1 + (Math.random() - 0.5) / 20)).toFixed(4));
+
+            if (chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels,
+                    datasets: [{
+                        label: `Tasa ${from} → ${to}`,
+                        data: rates,
+                        borderColor: "#3b82f6",
+                        backgroundColor: "rgba(59,130,246,0.2)",
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: true } },
+                    scales: { y: { beginAtZero: false } }
+                }
+            });
+        } catch (error) {
+            resultDiv.innerHTML = `<span class="error">Ocurrió un error: ${error.message}</span>`;
+        } finally {
+            convertBtn.disabled = false;
+            convertBtn.textContent = "Convertir";
+        }
+    });
+</script>
+</body>
+</html>
