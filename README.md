@@ -12,7 +12,7 @@ El usuario puede elegir entre varias opciones del menú para realizar conversion
 
 ##  Tecnologías utilizadas
 
--  **Java 17+**
+-  **Java 25+**
 -  **Maven** (gestor de dependencias)
 -  **ExchangeRate API** (para obtener tasas de cambio)
 -  **Gson** (para parsear respuestas JSON)
