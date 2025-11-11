@@ -1,8 +1,3 @@
-# Challenge-Conversor-de-Monedas
-Challenge de Alura Latam: Conversor de Monedas en Java usando API ExchangeRate
-
-# Challenge-Conversor-de-Monedas
-Challenge de Alura Latam: Conversor de Monedas en Java usando API ExchangeRate
 #  Challenge Conversor de Monedas
 
 Proyecto desarrollado como parte del **Challenge de Alura Latam - Backend con Java**.  
